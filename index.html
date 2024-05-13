@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        /* Style for the modal */
+        /* *{
+            box-sizing: border-box;
+        } */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 20% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 400px;
+        }
+
+        .blure-my-child * {
+            color: white;
+        }
+
+        .blure-my-child>h1,
+        .blure-my-child li {
+            /* backdrop-filter: blur(5px); */
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 2px;
+            padding-left: 20px;
+            padding-right: 20px;
+            border-radius: 5px;
+        }
+
+        .hideSide::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+
+<body
+    style='background-image: url("https://www.w3schools.com/cssref/img_tree.gif"), url("https://www.w3schools.com/cssref/paper.gif");'>
+    <div class="container mx-auto px-4 py-8 flex gap-2 flex-wrap">
+        <div class="bg-white rounded-lg shadow-lg flex-1">
+            <!-- Header -->
+            <div class="px-6 py-4 border-b border-gray-200 w-96">
+                <h1 class="text-lg font-semibold text-gray-800 inline-block">Chat App</h1>
+                <p id="typing" style="display: none;" class="inline"><span></span> is typing...</p>
+            </div>
+            <!-- Messages -->
+            <div id="parentChat"
+                style="background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');background-size: 800px;max-height: 100vh;overflow-y: scroll;"
+                class="px-6 py-4 space-y-4 hideSide">
+
+            </div>
+            <!-- Message Input -->
+            <div class="px-6 py-4 border-t border-gray-200">
+                <form id="sendMess" class="flex items-center">
+                    <input id="message" type="text" placeholder="Type a message..."
+                        class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500">
+                    <button
+                        class="ml-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg">Send</button>
+                </form>
+            </div>
+        </div>
+        <!-- other Live Users -->
+        <div style="background-image: url('/assets/image/1720236.jpg');background-size: 200px;"
+            class="bg-white rounded-lg shadow-lg  ml-auto mr-auto">
+            <div
+                class="relative flex flex-col mt-6 text-gray-700 shadow-md bg-clip-border rounded-xl w-96 blure-my-child gap-1 items-center">
+                <h1>Live user</h1>
+                <div class="w-80 overflow-hidden mb-4 mxx">
+                    <ul style="max-height: 100vh;overflow-y: scroll;" id="liveUsers" class="flex-col hideSide">
+
+
+                        <!-- ... -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="loginModal" style="display: block;" class="modal">
+        <div class="modal-content bg-white rounded-lg text-lg">
+            <span class="text-gray-800 font-bold ml">Add me</span>
+            <form id="addUserForm" class="mt-4">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="username">
+                        Username
+                    </label>
+                    <input
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        id="username" type="text" placeholder="Username" required>
+                </div>
+                <div class="flex items-center justify-between">
+                    <button
+                        class="ml-auto mr-auto bg-blue-500 hover:bg-blue-600 text-white font-semibold px-10 py-3 rounded-lg"
+                        type="submit">
+                        Add me
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- cloun purpes element -->
+    <li id="userLiveListCloun" class="my-2">
+        <div class="flex items-center gap-4">
+            <img class="w-10 h-10 rounded-full" src="/assets/image/avatar/2.jpg" alt="" loading="lazy">
+            <div class="font-medium dark:text-white">
+                <b>Jese Leos</b>
+            </div>
+        </div>
+    </li>
+    <!-- Sender Message -->
+    <div id="leftChat" class="flex items-start space-x-4">
+        <img src="https://via.placeholder.com/40" alt="Avatar" class="w-8 h-8 rounded-full">
+        <div class="bg-blue-100 p-3 rounded-lg max-w-xs border-t border-l border-r border-gray-200 rounded-bl-none">
+            <p class="text-sm text-gray-800">Hey! How's it going?</p>
+        </div>
+    </div>
+    <!-- Receiver Message -->
+    <div id="rightChat" class="flex justify-end items-start space-x-4">
+        <div class="bg-gray-100 p-3 rounded-lg max-w-xs border-t border-l border-r border-gray-200 rounded-br-none">
+            <p class="text-sm text-gray-800">Not bad, you?</p>
+        </div>
+        <img src="https://via.placeholder.com/40" alt="Avatar" class="w-8 h-8 rounded-full">
+    </div>
+    <script src="http://localhost:3100/socket.io/socket.io.js"></script>
+    <script>
+        let user
+        /* clon the li for live user and remove its id Attribut */
+        const userLiveListCloun = document.getElementById("userLiveListCloun").cloneNode(true)
+        userLiveListCloun.removeAttribute("id")
+        /* remove li(userLiveListCloun) from dom after cloning */
+        document.getElementById("userLiveListCloun").remove()
+        /* get access adding new user fomrm to modal*/
+        const modal = document.getElementById('loginModal');
+        const addUserForm = document.getElementById("addUserForm")
+        const liveUsers = document.getElementById("liveUsers")
+        const messageInput = document.getElementById("message")
+        /* actvilt typing or not */
+        let typing = false
+        const typingArray = new Set([])
+
+        const parentChat = document.getElementById("parentChat")
+        /* cloun the chat element and remove element from dom and remove id Atribute */
+        const leftChat = document.getElementById("leftChat").cloneNode(true)
+        leftChat.removeAttribute("id")
+        document.getElementById("leftChat").remove()
+
+        const rightChat = document.getElementById("rightChat").cloneNode(true)
+        rightChat.removeAttribute("id")
+        document.getElementById("rightChat").remove()
+
+
+        /* liveUsers.appendChild(userLiveListCloun) */
+        const socket = io.connect("http://localhost:3100")
+
+        /* remove the form after ading user */
+        addUserForm.addEventListener("submit", async (e) => {
+            e.preventDefault()
+            if (document.getElementById("username").value.trim()) {
+                /* modal.style.display = "none"; */
+                try {
+                    const arr = await socket.emit("addUser", document.getElementById("username").value)
+                    console.log(arr)
+                    user = document.getElementById("username").value.trim();
+                    modal.remove()
+                } catch (error) {
+                    console.error("addUser", error)
+                }
+
+            }
+        })
+        /* add new user in list */
+        socket.on("newUser", (newUserName) => {
+            console.log(newUserName);
+            const userLiveListCloun1 = userLiveListCloun.cloneNode(true)
+            userLiveListCloun1.classList.add(newUserName.replace(" ", "-"))
+            userLiveListCloun1.querySelector("b").innerHTML = newUserName
+            userLiveListCloun1.querySelector("img").setAttribute("src", `/assets/image/avatar/${newUserName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 9 || 9}.jpg`)
+            liveUsers.appendChild(userLiveListCloun1)
+            // Do something with the new user name, e.g., display it on the UI
+        });
+        /* olduser list */
+        socket.on("oldUser", (oldUserList) => {
+            oldUserList.forEach(element => {
+                const userLiveListCloun1 = userLiveListCloun.cloneNode(true)
+                userLiveListCloun1.classList.add(element.replace(" ", "-"))
+                userLiveListCloun1.querySelector("b").innerHTML = element
+                userLiveListCloun1.querySelector("img").setAttribute("src", `/assets/image/avatar/${element.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 9 || 9}.jpg`)
+                liveUsers.appendChild(userLiveListCloun1)
+            });
+        })
+        /* remove the offline users */
+        socket.on("offline", (user) => {
+            document.querySelector("." + user.replace(" ", "-")).remove()
+        })
+
+        /* brodcat new chat */
+        document.getElementById("sendMess").addEventListener("submit", (e) => {
+            e.preventDefault()
+            let message = messageInput.value.trim()
+            if (message) {
+                try {
+                    socket.emit("addChat", { message })
+                    messageInput.value = "";
+                } catch (error) {
+                    console.log("chat=>", error)
+                }
+            }
+
+        })
+        /* new chat lisanig */
+        socket.on("chatBrodCast", (chatObj) => {
+            const rightChat1 = rightChat.cloneNode(true)
+            const leftChat1 = leftChat.cloneNode(true)
+            if (chatObj.user == user) {
+                rightChat1.querySelector("img").setAttribute("src", `/assets/image/avatar/${chatObj.user.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 9 || 9}.jpg`)
+                rightChat1.querySelector("p").innerHTML = chatObj.message
+                parentChat.appendChild(rightChat1);
+            } else {
+                leftChat1.querySelector("img").setAttribute("src", `/assets/image/avatar/${chatObj.user.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 9 || 9}.jpg`)
+                leftChat1.querySelector("p").innerHTML = chatObj.message
+                parentChat.appendChild(leftChat1);
+            }
+
+        })
+        /* get old Chat */
+        socket.on("oldChat", (oldChatObj) => {
+            console.log(oldChatObj)
+            oldChatObj.forEach(chatObj => {
+                const rightChat1 = rightChat.cloneNode(true)
+                const leftChat1 = leftChat.cloneNode(true)
+                if (chatObj.user == user) {
+                    rightChat1.querySelector("img").setAttribute("src", `/assets/image/avatar/${chatObj.user.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 9 || 9}.jpg`)
+                    rightChat1.querySelector("p").innerHTML = chatObj.message
+                    parentChat.appendChild(rightChat1);
+                } else {
+                    leftChat1.querySelector("img").setAttribute("src", `/assets/image/avatar/${chatObj.user.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 9 || 9}.jpg`)
+                    leftChat1.querySelector("p").innerHTML = chatObj.message
+                    parentChat.appendChild(leftChat1);
+                }
+
+            })
+        })
+        /* messageInput.addEventListener("focus", () => {
+            const messageInput = messageInput;
+            if (messageInput === document.activeElement && messageInput.value) {
+                console.log("a");
+            }
+        });
+        messageInput.addEventListener("blur", () => {
+            console.log("b")
+        }) */
+
+
+        
+
+        function checkTypingActivity() {
+            if (messageInput === document.activeElement && messageInput.value && !typing) {
+                console.log("User is actively typing.");
+                socket.emit("typing");
+                typing = true; // Set typing state to true
+            } else if (!messageInput.value && typing) {
+                console.log("User is not actively typing.");
+                socket.emit("notTyping");
+                typing = false; // Set typing state to false
+            }
+        }
+
+        function handleVisibilityChange() {
+            if (document.hidden && typing) {
+                console.log("Tab is hidden or minimized.");
+                console.log("User is not actively typing.");
+                socket.emit("notTyping");
+                typing = false; // Set typing state to false
+            } else if (!document.hidden) {
+                checkTypingActivity();
+            }
+        }
+
+        messageInput.addEventListener("focus", () => {
+            checkTypingActivity();
+        });
+
+        messageInput.addEventListener("input", () => {
+            checkTypingActivity();
+        });
+
+        messageInput.addEventListener("blur", () => {
+            if(typing){
+                console.log("User is not actively typing.");
+                socket.emit("notTyping");
+                typing = false; // Set typing state to false
+            }
+        });
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+
+        socket.on("notTypeUser",(user)=>{
+            console.log("NO")
+            typingArray.delete(user) 
+            if(typingArray.size){ 
+                document.getElementById("typing").style.display = "inline"
+                document.getElementById("typing").querySelector("span").innerHTML = ""
+                
+                document.getElementById("typing").querySelector("span").innerHTML = JSON.stringify(Array.from(typingArray))
+            }else{
+                document.getElementById("typing").style.display = "none"
+            }
+        })
+        socket.on("typeUser",(user)=>{
+            typingArray.add(user)
+            console.log("YES",user,JSON.stringify(Array.from(typingArray)))
+            if(typingArray.size){
+                document.getElementById("typing").style.display = "inline"
+                document.getElementById("typing").querySelector("span").innerHTML = ""
+                document.getElementById("typing").querySelector("span").innerHTML = JSON.stringify(Array.from(typingArray))
+            }else{
+                document.getElementById("typing").style.display = "none"
+            }
+        })
+
+    </script>
+</body>
+
+</html>
